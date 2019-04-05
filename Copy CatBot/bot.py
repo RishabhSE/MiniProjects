@@ -44,8 +44,8 @@ print(raw_text[:300])
 chars = sorted(list(set(raw_text)))
 print('total chars: ', len(chars))
 
-char_to_int = dict((c, i) for i, c in enumerate(chars))
-int_to_char = dict((i, c) for i, c in enumerate(chars))
+character_to_integer = dict((c, i) for i, c in enumerate(chars))
+integer_to_character = dict((i, c) for i, c in enumerate(chars))
 
 # ***********************************************************************
 
@@ -70,8 +70,8 @@ x = np.zeros((len(sentences), maxlen, len(chars)), dtype=np.bool)
 y = np.zeros((len(sentences), len(chars)), dtype=np.bool)
 for i, sentence in enumerate(sentences):
     for t, char in enumerate(sentence):
-        x[i, t, char_to_int[char]] = 1
-    y[i, char_to_int[next_chars[i]]] = 1
+        x[i, t, character_to_integer[char]] = 1
+    y[i, character_to_integer[next_chars[i]]] = 1
     
 # ***********************************************************************
 
@@ -120,11 +120,11 @@ def on_epoch_end(epoch, logs):
         for i in range(400):
             x_pred = np.zeros((1, maxlen, len(chars)))
             for t, char in enumerate(sentence):
-                x_pred[0, t, char_to_int[char]] = 1.
+                x_pred[0, t, character_to_integer[char]] = 1.
 
             preds = model.predict(x_pred, verbose=0)[0]
             next_index = sample(preds, diversity)
-            next_char = int_to_char[next_index]
+            next_char = integer_to_character[next_index]
 
             generated += next_char
             sentence = sentence[1:] + next_char
@@ -171,11 +171,11 @@ def generate_text(length, diversity):
     for i in range(length):
             x_pred = np.zeros((1, maxlen, len(chars)))
             for t, char in enumerate(sentence):
-                x_pred[0, t, char_to_int[char]] = 1.
+                x_pred[0, t, character_to_integer[char]] = 1.
 
             preds = model.predict(x_pred, verbose=0)[0]
             next_index = sample(preds, diversity)
-            next_char = int_to_char[next_index]
+            next_char = integer_to_character[next_index]
 
             generated += next_char
             sentence = sentence[1:] + next_char
