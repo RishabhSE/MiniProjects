@@ -1,4 +1,4 @@
-# Load Larger LSTM network and generate text
+# Importing Pakages
 from __future__ import print_function
 import sys
 import numpy as np
@@ -7,6 +7,8 @@ import string, os
 import random
 import warnings
 warnings.filterwarnings("ignore")
+
+# Importing keras
 from keras.callbacks import LambdaCallback
 from keras.models import Sequential
 from keras.layers import Dense, Activation
@@ -76,13 +78,22 @@ for i, sentence in enumerate(sentences):
 # ***********************************************************************
 
 # Define the LSTM model
+    
+# Sequential modeling
 model = Sequential()
+
+
 model.add(LSTM(128, input_shape=(maxlen, len(chars))))
+
+# Adding a fully connected layer with specifing Output size
 model.add(Dense(len(chars)))
+
+
 model.add(Activation('softmax'))
 
-optimizer = RMSprop(lr=0.01)
-model.compile(loss='categorical_crossentropy', optimizer=optimizer)
+# Compile the network with the loss function and optimizer function.
+# This will allow our network to change weights and minimize the loss. 
+model.compile(loss='categorical_crossentropy', optimizer=RMSprop(lr=0.01))
 
 # ***********************************************************************
 
