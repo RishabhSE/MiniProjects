@@ -58,10 +58,10 @@ integer_to_character = dict((i, c) for i, c in enumerate(chars))
 maxlen = 40
 step = 3
 sentences = []
-next_chars = []
+next_characters = []
 for i in range(0, len(raw_text) - maxlen, step):
     sentences.append(raw_text[i: i + maxlen])
-    next_chars.append(raw_text[i + maxlen])
+    next_characters.append(raw_text[i + maxlen])
 print('nb sequences:', len(sentences))
 
 # ***********************************************************************
@@ -73,28 +73,30 @@ y = np.zeros((len(sentences), len(chars)), dtype=np.bool)
 for i, sentence in enumerate(sentences):
     for t, char in enumerate(sentence):
         x[i, t, character_to_integer[char]] = 1
-    y[i, character_to_integer[next_chars[i]]] = 1
+    y[i, character_to_integer[next_characters[i]]] = 1
     
 # ***********************************************************************
 
 # Define the LSTM model
     
-# Sequential modeling
+# Sequential modeling( used to define a linear stack of network layer )
 model = Sequential()
 
-
-model.add(LSTM(128, input_shape=(maxlen, len(chars))))
+# units -> Dimensionality O/P space
+# Input_shape -> shape of the I/P
+model.add(LSTM(units = 128, input_shape=(maxlen, len(chars))))
 
 # Adding a fully connected layer with specifing Output size
 model.add(Dense(len(chars)))
 
-
+# Using softmax as an Activation Function
 model.add(Activation('softmax'))
 
 # Compile the network with the loss function and optimizer function.
 # This will allow our network to change weights and minimize the loss. 
 model.compile(loss='categorical_crossentropy', optimizer=RMSprop(lr=0.01))
 
+print(model.summary())
 # ***********************************************************************
 
 # Samples an index from a probability array with some temperature.
@@ -167,6 +169,7 @@ callbacks = [print_callback, checkpoint, reduce_lr]
 
 # ***********************************************************************
 
+# 
 model.fit(x, y, batch_size=128, epochs=5, callbacks=callbacks)
 
 # ***********************************************************************
