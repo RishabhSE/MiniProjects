@@ -433,12 +433,30 @@ test <- test[, -c(8)]
 # Making Correlation Matrix
 library(corrplot)
 cor_train = cor(train[,-c(4)])
-corrplot(cor_train, method = "pie", type = "lower", tl.cex = 0.9)
+corrplot(cor_train, method = "pie", type = "lower")
 
 ```
 
 Obsevations
-*
+* There are some highly correlated variables, therefore we have to remove them.
+
+```{r}
+# Converting into dataframe
+cor_train <- as.data.frame(cor_train)
+
+# making new columns from row names
+cor_train <- cor_train %>% mutate( var_names = row.names(cor_train))
+
+# filter having high correlation with Item Outlet Sales
+kable(cor_train %>% select(var_names, Item_Outlet_Sales) %>% filter(Item_Outlet_Sales >0.3 | Item_Outlet_Sales < -0.3 ))
+
+# Dropping highly correlated variables from train set
+train <- train[!(names(train)) %in% c('Outlet_Type_New.Outlet.4','Outlet_Type_New.Outlet.6','Outlet_Type_New.OutLet.5','Outlet_Type_New.OutLet.1','Item_Category.Non.Consumable','Item_MRP_cluster.4th','Item_Fat_Content.Low.Fat')]
+
+# Dropping highly correlated variables from test set
+test <- test[!(names(test)) %in% c('Outlet_Type_New.Outlet.4','Outlet_Type_New.Outlet.6','Outlet_Type_New.OutLet.5','Outlet_Type_New.OutLet.1','Item_Category.Non.Consumable','Item_MRP_cluster.4th','Item_Fat_Content.Low.Fat')]
+
+```
 
 ### Split Train Dataset
 ```{r}
@@ -449,14 +467,71 @@ train_set = subset(train[,-c(1)] , split==TRUE )
 valid_set = subset(train[,-c(1)]  , split==FALSE ) 
 ```
 
+
 ### Model 1
-
 ```{r}
-lr = lm( Item_Outlet_Sales~.,data = train_set)
-summary(lr)
+
+# Creating a task
+ml_task <- makeRegrTask(data = train_set[,-c(3)],target = 'Item_Outlet_Sales')
+
+# Making a learner
+# Regression RandomForest model
+rf.lrn <- makeLearner("regr.randomForest",par.vals = list(ntree = 1000,
+                                                          mtry = 10,
+                                                          maxnodes = 40,
+                                                          importance = TRUE))
+# To get the list of parameters for any algorithm
+# getParamSet("regr.randomForest")
+
+# Define Hyperparameters of model
+model_Params <- makeParamSet(
+  makeIntegerParam("ntree",lower = 500, upper = 1200),
+  makeIntegerParam("mtry",lower = 3, upper = 12),
+  makeIntegerParam("maxnodes",lower = 20, upper = 50)
+)
+
+# Define model tuning algorithm ~ Random tune algorithm
+# Random Search on the space
+random_tune <- makeTuneControlRandom(maxit = 100L)
+
+# Create repeated cross validation folds
+cv_folds <- makeResampleDesc("CV", iters = 3) # 3 fold cross validation
+
+# Tune model to find best performing parameter settings 
+# using random search algorithm
+tuned_model <- tuneParams(learner = rf.lrn,
+                          task = ml_task,
+                          resampling = cv_folds,
+                          measures = mlr::rmse,       
+                          par.set = model_Params,
+                          control = random_tune,
+                          show.info = FALSE
+                          )
+
+# Apply optimal parameters to model
+model <- setHyperPars(learner = model,
+                      par.vals = tuned_model$x)
 
 
-  
+# Verify performance on cross validation folds of tuned model
+# resample(model,ml_task,cv_folds,measures = list(rsq,mlr::rmse))
+
+
+rf <- train(learner = rf.lrn,task = ml_task)
+rf_pred <- predict(rf,newdata = valid_set)
+performance(rf_pred,measures = mlr::rmse)
+
+
+# creating Submission file
+Item_Outlet_Sales <- predict(rf, newdata = Test_trans[,pred_var])
+submission_file = data.frame(col1 = Test$Item_Identifier,col2 = Test$Outlet_Identifier,
+                             col3 = Item_Outlet_Sales)
+colnames( submission_file) <- c("Item_Identifier","Outlet_Identifier","Item_Outlet_Sales")
+
+write.csv(submission_file, file = "C:\\Users\\RISHABH\\Desktop\\sub_file.csv", row.names = FALSE)
+
+# 1194
+ 
 ```
 
 
